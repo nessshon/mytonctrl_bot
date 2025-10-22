@@ -1,0 +1,11 @@
+services:
+
+  bot:
+    build: .
+    command: sh -c "cd /usr/src/mytonctrl_bot && python mytonctrl_bot.py"
+    container_name: "mytonctrl-bot"
+    restart: unless-stopped
+    volumes:
+      - ./:/usr/src/mytonctrl_bot
+      - ./tmp/:/tmp/mytonctrl_bot
+      - ./data/:/usr/local/bin/mytonctrl_bot
