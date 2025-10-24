@@ -56,6 +56,7 @@ class Toncenter:
 		fullnode_adnl = base64.b64decode(node.data.fullnode_adnl).hex().upper()
 		if fullnode_adnl in user.get_fullnode_adnl_list():
 			return node
+		return node
 	#end define
 
 	def do_get_telemetry(self, adnl):
