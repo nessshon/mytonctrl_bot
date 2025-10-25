@@ -31,7 +31,8 @@ from utils import (
 	find_text_in_list,
 	get_item_from_list,
 	collect_template,
-	class_list2str_list
+	class_list2str_list,
+	generate_passwd_hash,
 )
 from user import (
 	User,
@@ -69,6 +70,7 @@ def init():
 	# Start threads
 	local.start_cycle(message_sender, sec=0.1)
 	local.start_cycle(scan_alerts, sec=60)
+	local.start_cycle(scan_adnl_passwords, sec=75)
 #end define
 
 def init_alerts():
@@ -149,7 +151,7 @@ def init_bot():
 	
 	start_handler = CommandHandler("start", start_cmd)
 	help_handler = CommandHandler("help", help_cmd)
-	#status_handler = CommandHandler("status", status_cmd)
+	status_handler = CommandHandler("status", status_cmd)
 	subscribe_node_handler = CommandHandler("subscribe_node", subscribe_node_cmd)
 	#add_fullnode_adnl_handler = CommandHandler("add_fullnode_adnl", add_fullnode_adnl_cmd)
 	unsubscribe_node_handler = CommandHandler("unsubscribe_node", unsubscribe_node_cmd)
@@ -174,7 +176,7 @@ def init_bot():
 	dispatcher.add_handler(echo_handler)
 	dispatcher.add_handler(start_handler)
 	dispatcher.add_handler(help_handler)
-	#dispatcher.add_handler(status_handler)
+	dispatcher.add_handler(status_handler)
 	dispatcher.add_handler(subscribe_node_handler)
 	#dispatcher.add_handler(add_fullnode_adnl_handler)
 	dispatcher.add_handler(unsubscribe_node_handler)
@@ -410,24 +412,50 @@ def subscribe_node_cmd(update, context):
 
 	try:
 		adnl = context.args[0]
-		label = get_item_from_list(context.args, 1)
+		passwd = context.args[1]
+		label = get_item_from_list(context.args, 2)
 	except:
-		error = "Bad args. Usage: `/subscribe_node <adnl> [<label>]`"
+		error = "Bad args. Usage: `/subscribe_node <adnl> <telemetry_pass> [<label>]`"
 		send_message(user, error)
 		return
-	do_subscribe_node_cmd(user, adnl, label)
+	do_subscribe_node_cmd(user, adnl, passwd, label)
 #end define
 
-def do_subscribe_node_cmd(user, adnl, label):
+def do_subscribe_node_cmd(user, adnl, passwd, label):
+	# получаем списки валидаторов и нод, доступных через toncenter
 	validators_list = toncenter.get_validators_list()
 	nodes_list = toncenter.get_nodes_list()
 	adnl_list = validators_list + nodes_list
+
+	# проверяем, существует ли нода в сети
 	if adnl in adnl_list:
+		node = toncenter.get_telemetry(user, adnl)
+		passwd_hash = generate_passwd_hash(passwd)
+
+		# если пользователь админ и пароль == "xxx" — добавляем без проверки
+		if user.is_admin() and passwd.lower() == "xxx":
+			pass
+		else:
+			# сверяем хэш переданного пароля с хэшем из телеметрии
+			if passwd_hash != node.telemetry_pass:
+				output = f"Incorrect password for `{adnl}`."
+				send_message(user, output)
+				return
+
+		# сохраняем хэш пароля для ноды у пользователя
+		user_adnl_passwrods = user.get_adnl_passwords()
+		user_adnl_passwrods[adnl] = passwd_hash
+		user.db.adnl_passwords = user_adnl_passwrods
+
+		# добавляем ноду в список пользователя и сохраняем метку (label)
 		output = user.add_adnl(adnl)
 		user.add_label(adnl, label)
+
+		# предупреждение, если нода не отправляет телеметрию
 		if adnl not in nodes_list:
 			output = f"Warning: Node don't send telemetry. Some functionality is unavailable. \n" + output
 	else:
+		# если ADNL не найден в списке доступных нод
 		output = f"_{adnl}_ not found"
 	send_message(user, output)
 #end define
@@ -684,6 +712,50 @@ def scan_user_alerts(user):
 		alert.check(user)
 #end define
 
+def scan_adnl_passwords():
+	users = get_users(local)
+	for user in users:
+		try_scan_user_adnl_passwrods(user)
+#end define
+
+def try_scan_user_adnl_passwrods(user):
+	# не проверяем актуальность паролей у админов
+	if user.is_admin():
+		return
+	# получаем список подписанных ADNL-адресов и сохранённые хэши паролей пользователя
+	user_adnl_list = user.get_adnl_list()
+	user_adnl_labels = user.get_labels()
+	user_adnl_passwords = user.get_adnl_passwords()
+	# список нод, которые будут удалены из-за несовпадения пароля
+	removed_adnls = []
+	# идём по копии списка, чтобы безопасно изменять оригинал
+	for adnl in list(user_adnl_list):
+		# сохранённый пароль пользователя (хэш)
+		saved_passwd_hash = user_adnl_passwords.get(adnl)
+		# получаем актуальные данные ноды и её хэш пароля из телеметрии
+		node = toncenter.get_telemetry(user, adnl)
+		node_passwd_hash = getattr(node, "telemetry_pass", None)
+		# если у ноды нет пароля или хэши не совпадают — удаляем подписку
+		if not node_passwd_hash or node_passwd_hash != saved_passwd_hash:
+			if adnl in user_adnl_list:
+				user_adnl_list.remove(adnl)
+			if adnl in user_adnl_passwords:
+				del user_adnl_passwords[adnl]
+			if adnl in user_adnl_labels:
+				del user_adnl_labels[adnl]
+			removed_adnls.append(adnl)
+
+	# если какие-то ноды были удалены — отправляем сообщение пользователю
+	if removed_adnls:
+		joined = "\n\n".join(f"`{adnl}`" for adnl in removed_adnls)
+		output = (
+			f"⚠️ *The following nodes were removed due to telemetry password mismatch:*\n\n"
+			f"{joined}\n\n"
+			f"*Resubscribe with:*\n"
+			f"`/subscribe_node <adnl> <telemetry_pass> [label]`"
+		)
+		send_message(user, output)
+#end define
 
 
 
