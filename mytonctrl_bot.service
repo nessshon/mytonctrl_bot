@@ -1,0 +1,18 @@
+[Unit]
+Description = mytonctrl_bot service. Created by https://github.com/igroman787/mypylib.
+After = network.target
+
+[Service]
+Type = simple
+Restart = always
+RestartSec = 30
+WorkingDirectory = /var/mytonctrl_bot
+ExecStart = /usr/src/mytonctrl_bot/env/bin/python /usr/src/mytonctrl_bot/mytonctrl_bot.py
+ExecStopPost = /bin/echo service down
+Environment=XDG_DATA_HOME=/var
+Environment=PYTHONUNBUFFERED=1
+User = mytonctrl_bot
+Group = mytonctrl_bot
+
+[Install]
+WantedBy = multi-user.target
