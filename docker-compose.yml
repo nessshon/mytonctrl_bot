@@ -7,5 +7,4 @@ services:
     restart: unless-stopped
     volumes:
       - ./:/usr/src/mytonctrl_bot
-      - ./tmp/:/tmp/mytonctrl_bot
       - ./data/:/usr/local/bin/mytonctrl_bot
