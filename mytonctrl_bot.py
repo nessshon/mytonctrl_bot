@@ -412,7 +412,7 @@ def subscribe_node_cmd(update, context):
 
 	try:
 		adnl = context.args[0]
-		passwd = context.args[1]
+		passwd = context.args[1].strip()
 		label = get_item_from_list(context.args, 2)
 	except:
 		error = "Bad args. Usage: `/subscribe_node <adnl> <telemetry_pass> [<label>]`"
