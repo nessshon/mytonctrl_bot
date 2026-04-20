@@ -1,5 +1,5 @@
 ✅ *Node* `{adnl_short}`*: Sync OK*
 
-Node sync: *{value} seconds*.
+Masterchain: *{mc_sync} seconds*, Shardchain: *{sc_sync} blocks*.
 
 ADNL: `{adnl}`

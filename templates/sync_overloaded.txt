@@ -1,5 +1,5 @@
-🆘 *Node* `{adnl_short}`*: Out of sync*
+🆘 *Node* `{adnl_short}`*: {chain} out of sync*
 
-Node out of sync greater than {threshold} seconds: *{value} seconds*.
+{chain} out of sync greater than {threshold} {unit}: *{value} {unit}*.
 
 ADNL: `{adnl}`
