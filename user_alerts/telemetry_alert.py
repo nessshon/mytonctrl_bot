@@ -37,14 +37,19 @@ class TelemetryAlert:
 	#end define
 
 	def check_sync(self, user, node):
+		mc_upper, mc_lower = 20, 10
+		sc_upper, sc_lower = 10, 5
 		adnl = node.adnl_address
-		out_of_sync = node.data.validatorStatus.out_of_sync
-		#if out_of_sync > 40:
-		#	self.warn("Sync", user, adnl, out_of_sync, "seconds")
-		#elif out_of_sync < 20:
-		#	self.warn("Sync", user, adnl, out_of_sync, "seconds", overloaded=False)
-		self.check_with_threshold(user, alert_name="Sync", adnl=adnl, value_for_comparison=out_of_sync, 
-			upper_threshold=40, lower_threshold=20, value=out_of_sync)
+		mc_sync = node.data.validatorStatus.masterchain_out_of_sync or 0
+		sc_sync = node.data.validatorStatus.shardchain_out_of_sync or 0
+		if mc_sync > mc_upper:
+			self.warn(user, "Sync", overloaded=True, adnl=adnl, mc_sync=mc_sync, sc_sync=sc_sync,
+				chain="Masterchain", unit="seconds", value=mc_sync, threshold=mc_upper)
+		elif sc_sync > sc_upper:
+			self.warn(user, "Sync", overloaded=True, adnl=adnl, mc_sync=mc_sync, sc_sync=sc_sync,
+				chain="Shardchain", unit="blocks", value=sc_sync, threshold=sc_upper)
+		elif mc_sync < mc_lower and sc_sync < sc_lower:
+			self.warn(user, "Sync", overloaded=False, adnl=adnl, mc_sync=mc_sync, sc_sync=sc_sync)
 	#end define
 
 	def check_cpu(self, user, node):
