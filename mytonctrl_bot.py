@@ -9,7 +9,9 @@ from mypylib.mypylib import (
 	MyPyClass,
 	Dict,
 	get_timestamp,
-	get_git_hash
+	get_git_hash,
+	get_git_author_and_repo,
+	get_git_branch,
 )
 
 # Telegram components
@@ -304,11 +306,23 @@ def bot_cmd(update, context):
 		unknown_cmd(update, context)
 		return
 	#end if
+	author, repo = get_git_author_and_repo(local.buffer.my_dir)
+	if author is None or repo is None:
+		author = repo = "unknown"
+	#end if
+	branch = get_git_branch(local.buffer.my_dir)
+	if branch is None:
+		branch = "unknown"
+	#end if
 
 	active_users = get_active_users(local)
 	db_size = round(getsizeof(local.db)/10**6, 2)
 	buffer_size = round(getsizeof(local.buffer)/10**6, 2)
-	output = f"version: `{local.buffer.version}`" + '\n'
+
+	output = f"author: `{author}`" + '\n'
+	output += f"repo: `{repo}`" + '\n'
+	output += f"branch: `{branch}`" + '\n'
+	output += f"version: `{local.buffer.version}`" + '\n'
 	output += f"users: `{len(active_users)}/{len(local.db.users)}`" + '\n'
 	output += f"db size: `{db_size} Mb`" + '\n'
 	output += f"buffer size: `{buffer_size} Mb`" + '\n'
