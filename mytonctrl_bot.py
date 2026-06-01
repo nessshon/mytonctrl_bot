@@ -443,18 +443,18 @@ def do_subscribe_node_cmd(user, adnl, passwd, label):
 
 	# проверяем, существует ли нода в сети
 	if adnl in adnl_list:
-		node = toncenter.get_telemetry(user, adnl)
+		node = toncenter.do_get_telemetry(adnl)
+		if node is None:
+			output = f"_{adnl}_ not found"
+			send_message(user, output)
+			return
 		passwd_hash = generate_passwd_hash(passwd)
 
-		# если пользователь админ и пароль == "xxx" — добавляем без проверки
-		if user.is_admin() and passwd.lower() == "xxx":
-			pass
-		else:
-			# сверяем хэш переданного пароля с хэшем из телеметрии
-			if passwd_hash != node.data.telemetry_pass:
-				output = f"Incorrect password for `{adnl}`."
-				send_message(user, output)
-				return
+		# сверяем хэш переданного пароля с хэшем из телеметрии
+		if passwd_hash != node.data.telemetry_pass:
+			output = f"Incorrect password for `{adnl}`."
+			send_message(user, output)
+			return
 
 		# сохраняем хэш пароля для ноды у пользователя
 		user_adnl_passwrods = user.get_adnl_passwords()
@@ -748,6 +748,8 @@ def try_scan_user_adnl_passwrods(user):
 		saved_passwd_hash = user_adnl_passwords.get(adnl)
 		# получаем актуальные данные ноды и её хэш пароля из телеметрии
 		node = toncenter.get_telemetry(user, adnl)
+		if node is None:
+			continue
 		node_passwd_hash = node.data.telemetry_pass
 		# если у ноды нет пароля или хэши не совпадают — удаляем подписку
 		if not node_passwd_hash or node_passwd_hash != saved_passwd_hash:

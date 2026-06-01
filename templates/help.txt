@@ -1,6 +1,6 @@
 To start using the bot, add the node/validator address to the watch list by /subscribe\_node command:
 
-`/subscribe_node <NODE_ADNL_ADDRESS>`
+`/subscribe_node <NODE_ADNL_ADDRESS> <TELEMETRY_PASS> [<label>]`
 
 You can get the ADNL address in MyTonCtrl with the `status` command.
 
