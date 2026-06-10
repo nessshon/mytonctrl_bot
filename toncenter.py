@@ -2,7 +2,6 @@
 # -*- coding: utf_8 -*-
 
 import json
-import base64
 from utils import try_get_url, with_buffer
 from mypylib.mypylib import Dict, get_timestamp
 
@@ -53,8 +52,7 @@ class Toncenter:
 		node = self.do_get_telemetry(adnl)
 		if node is None:
 			return
-		fullnode_adnl = base64.b64decode(node.data.fullnode_adnl).hex().upper()
-		if fullnode_adnl in user.get_fullnode_adnl_list():
+		if adnl in user.get_adnl_list():
 			return node
 	#end define
 

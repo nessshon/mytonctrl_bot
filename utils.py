@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
 
+import base64
+import hashlib
 import time
 import json
 import urllib.request
@@ -129,4 +131,18 @@ def class_list2str_list(class_list):
 
 def amount_formatting(amount):
 	return f"{amount:,}".replace(',', ' ')
+#end define
+
+def generate_passwd_hash(password: str) -> str:
+	if not isinstance(password, str):
+		raise TypeError("Password must be a string")
+
+	data = "https://telemetry.toncenter.com/getTelemetryData" + password
+	data_bytes = data.encode("utf-8")
+
+	hasher = hashlib.sha256(data_bytes)
+	hash_bytes = hasher.digest()
+	hash_b64 = base64.b64encode(hash_bytes)
+
+	return hash_b64.decode("utf-8")
 #end define

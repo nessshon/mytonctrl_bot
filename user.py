@@ -54,6 +54,9 @@ class User:
 		return self.get_data_from_db("adnl_list", list)
 	#end define
 
+	def get_adnl_passwords(self):
+		return self.get_data_from_db("adnl_passwords", dict)
+
 	def get_fullnode_adnl_list(self):
 		return self.get_data_from_db("fullnode_adnl_list", list)
 	#end define
