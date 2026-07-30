@@ -34,7 +34,7 @@ def try_get_url(url):
 
 def get_url(url):
 	req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-	conn = urllib.request.urlopen(req)
+	conn = urllib.request.urlopen(req, timeout=30)
 	data = conn.read()
 	text = data.decode()
 	return text
