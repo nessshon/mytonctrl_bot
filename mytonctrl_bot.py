@@ -17,7 +17,7 @@ from mypylib.mypylib import (
 # Telegram components
 #pip3 install python-telegram-bot==13.7
 from telegram import Bot, ParseMode
-from telegram.error import BadRequest, Unauthorized
+from telegram.error import BadRequest, Unauthorized, RetryAfter, NetworkError
 from telegram.utils.helpers import escape_markdown
 from telegram.ext import (
 	Updater,
@@ -126,18 +126,30 @@ def send_message(user, text):
 def do_send_message(user, text):
 	# print(f"do_send_message.text: `{text}`")
 	# context.bot.sendMessage(user.id=user.id, text=text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True, disable_notification=True)
-	try:
-		local.buffer.updater.bot.sendMessage(chat_id=user.id, text=text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True, disable_notification=True)
-	except BadRequest as ex:
-		if ex.message == "Chat not found":
-			user.delete()
-		else:
-			local.add_log(f"do_send_message error: {ex}", "error")
-	except Unauthorized as ex:
-		if ex.message == "Forbidden: bot was blocked by the user":
-			user.delete()
-		else:
-			local.add_log(f"do_send_message error: {ex}", "error")
+	err = None
+	for i in range(3):
+		try:
+			local.buffer.updater.bot.sendMessage(chat_id=user.id, text=text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True, disable_notification=True)
+			return
+		except BadRequest as ex:
+			if ex.message == "Chat not found":
+				user.delete()
+			else:
+				local.add_log(f"do_send_message error: {ex}", "error")
+			return
+		except Unauthorized as ex:
+			if ex.message == "Forbidden: bot was blocked by the user":
+				user.delete()
+			else:
+				local.add_log(f"do_send_message error: {ex}", "error")
+			return
+		except RetryAfter as ex:
+			err = ex
+			sleep(ex.retry_after)
+		except NetworkError as ex:
+			err = ex
+			sleep(1)
+	local.add_log(f"do_send_message error: {err}", "error")
 #end define
 
 def init_bot():
