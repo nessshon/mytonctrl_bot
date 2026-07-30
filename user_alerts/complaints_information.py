@@ -21,7 +21,8 @@ class ComplaintsInformation:
 		past_validation_cycle = self.toncenter.get_validation_cycle(past=True)
 		election_id = past_validation_cycle.cycle_id
 		utime_until = past_validation_cycle.cycle_info.utime_until
-		if get_timestamp() < utime_until + 900:
+		# 32768 = stake_held_for (config15)
+		if get_timestamp() < utime_until + 32768 + 900:
 			return
 		#end if
 
@@ -42,21 +43,27 @@ class ComplaintsInformation:
 			return
 		#end if
 
-		complaints_text = str()
+		blocks = list()
 		for complaint in complaints:
 			penalty = complaint.suggested_fine // 10**9
 			penalty_text = amount_formatting(penalty)
 			validator = self.toncenter.get_validator(complaint.adnl_addr, past=True)
 			efficiency = self.toncenter.get_validator_efficiency(complaint.adnl_addr, election_id)
-			complaints_text += collect_template(self.local, "complaint", index=validator.index, adnl=complaint.adnl_addr, efficiency=efficiency, penalty=penalty_text)
-			complaints_text += '\n'
-		if not len(complaints):
-			complaints_text += 'No poor performing validators in the round'
+			if efficiency is None:
+				efficiency = "?"
+			blocks.append(collect_template(self.local, "complaint", index=validator.index, adnl=complaint.adnl_addr, efficiency=efficiency, penalty=penalty_text) + '\n')
+		if not len(blocks):
+			blocks.append('No poor performing validators in the round')
 		start_time = timestamp2utcdatetime(election_id)
 		end_time = timestamp2utcdatetime(utime_until)
-		inform_text = collect_template(self.local, "complaints_information", election_id=election_id, start_time=start_time, end_time=end_time, complaints=complaints_text)
 
-		user.add_message(inform_text)
+		inform_texts = list()
+		for i in range(0, len(blocks), 20):
+			complaints_text = ''.join(blocks[i:i+20])
+			inform_texts.append(collect_template(self.local, "complaints_information", election_id=election_id, start_time=start_time, end_time=end_time, complaints=complaints_text))
+		#end for
+
+		user.add_message(inform_texts)
 		triggered_alerts_list[alert_name] = get_timestamp()
 	#end define
 #end class

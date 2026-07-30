@@ -15,8 +15,9 @@ class Toncenter:
 		efficiency_list = self.get_efficiency_list(election_id=election_id)
 		for validator in efficiency_list:
 			if validator.adnl_addr == adnl:
-				efficiency = round(validator.efficiency, 2)
-				return efficiency
+				if validator.efficiency is None:
+					return None
+				return round(validator.efficiency, 2)
 	#end define
 
 	def get_validator(self, adnl, past=False):
