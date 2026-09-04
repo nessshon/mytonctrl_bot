@@ -49,11 +49,13 @@ from user_alerts import (
 	ElectionsInformation
 )
 from toncenter import Toncenter
+from heartbeat import Heartbeat
 
 
 # Global vars
 local = MyPyClass(__file__)
 toncenter = Toncenter(local)
+heartbeat = Heartbeat()
 
 
 def init():
@@ -94,6 +96,8 @@ def init_buffer():
 	local.buffer.api_key = data.api_key
 	local.db.delay = data.delay if type(data.delay) == int else 60
 	local.buffer.admins = data.admins if type(data.admins) == list else list()
+	local.buffer.gatus_heartbeat_url = data.gatus_heartbeat_url
+	local.buffer.gatus_heartbeat_token = data.gatus_heartbeat_token
 	local.buffer.version = get_git_hash(local.buffer.my_dir, short=True)
 #end define
 
@@ -794,7 +798,11 @@ def try_scan_user_adnl_passwrods(user):
 if __name__ == "__main__":
 	init()
 	updater = init_bot()
+	if local.buffer.gatus_heartbeat_url and local.buffer.gatus_heartbeat_token:
+		heartbeat.install(updater.bot, local.buffer.gatus_heartbeat_url, local.buffer.gatus_heartbeat_token, local.buffer.telegram_bot_token)
 	updater.start_polling()
+	if local.buffer.gatus_heartbeat_url and local.buffer.gatus_heartbeat_token:
+		local.start_cycle(heartbeat.tick, sec=60)
 #end if
 
 
